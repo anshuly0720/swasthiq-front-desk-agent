@@ -12,6 +12,7 @@ from typing import Any, Dict
 
 # --- argument shape -------------------------------------------------------
 INVALID_ARGUMENTS = "INVALID_ARGUMENTS"
+UNKNOWN_TOOL = "UNKNOWN_TOOL"
 
 # --- unknown references ---------------------------------------------------
 UNKNOWN_DOCTOR = "UNKNOWN_DOCTOR"

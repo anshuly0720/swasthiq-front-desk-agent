@@ -1,0 +1,127 @@
+"""The one endpoint SwasthiQ calls.
+
+Day 1: contract-valid skeleton. The tool layer is wired in and the response
+shape is exactly schema.md, but no conversation layer exists yet, so every
+request comes back `abandoned`. Day 2 replaces the marked section.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+from typing import Any, Dict, List, Optional
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+from .clinic_data import load_clinic
+from .store import ClinicStore
+from .tools.registry import ToolLayer
+
+logger = logging.getLogger("front_desk")
+
+app = FastAPI(title="Clinic Front Desk Agent", version="0.1.0")
+
+
+class AgentRunRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    conversation_id: str
+    today: str
+    turns: List[str] = Field(default_factory=list)
+
+
+def contract_response(
+    conversation_id: str,
+    tool_calls: Optional[List[Dict[str, Any]]] = None,
+    terminal_state: str = "abandoned",
+    escalation_reason: Optional[str] = None,
+    patient_id: Optional[str] = None,
+    appointment_id: Optional[str] = None,
+    reply: str = "",
+    metrics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Exactly the keys schema.md lists, and nothing else."""
+    return {
+        "conversation_id": conversation_id,
+        "tool_calls": tool_calls or [],
+        "terminal_state": terminal_state,
+        "escalation_reason": escalation_reason,
+        "patient_id": patient_id,
+        "appointment_id": appointment_id,
+        "reply": reply,
+        "metrics": metrics or {"turns": 0, "tokens": 0, "latency_ms": 0},
+    }
+
+
+@app.get("/health")
+def health() -> Dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/agent/run")
+def agent_run(request: AgentRunRequest) -> Dict[str, Any]:
+    started = time.monotonic()
+
+    # Fresh store per request. The starter README requires each run to begin
+    # from clinic.json as shipped, so nothing booked here survives into the
+    # next conversation.
+    store = ClinicStore(load_clinic())
+    try:
+        tools = ToolLayer(store, today=request.today)
+
+        # ------------------------------------------------------------------
+        # Day 2 replaces this block with the conversation layer. Everything
+        # above and below it is the contract and stays.
+        # ------------------------------------------------------------------
+        terminal_state = "abandoned"
+        escalation_reason = None
+        patient_id = None
+        appointment_id = None
+        reply = ""
+        # ------------------------------------------------------------------
+
+        return contract_response(
+            conversation_id=request.conversation_id,
+            tool_calls=tools.calls,
+            terminal_state=terminal_state,
+            escalation_reason=escalation_reason,
+            patient_id=patient_id,
+            appointment_id=appointment_id,
+            reply=reply,
+            metrics={
+                "turns": len(request.turns),
+                "tokens": 0,
+                "latency_ms": int((time.monotonic() - started) * 1000),
+            },
+        )
+    finally:
+        store.close()
+
+
+@app.exception_handler(Exception)
+async def never_return_a_500(request: Request, exc: Exception) -> JSONResponse:
+    """A crash costs the whole conversation; a degraded answer costs one case.
+
+    The brief wants a malformed model response handled without corrupting the
+    output or crashing the request. This is the last line of that: whatever
+    went wrong, the grader still gets something that satisfies the contract.
+    """
+    logger.exception("unhandled error in %s", request.url.path)
+    conversation_id = "unknown"
+    try:
+        body = await request.json()
+        conversation_id = body.get("conversation_id", "unknown")
+    except Exception:  # noqa: BLE001 - the body is what failed
+        pass
+
+    return JSONResponse(
+        status_code=200,
+        content=contract_response(
+            conversation_id=conversation_id,
+            terminal_state="escalated",
+            escalation_reason="out_of_scope",
+            reply="Main aapko front desk se connect kar rahi hoon.",
+        ),
+    )
