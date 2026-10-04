@@ -1,0 +1,31 @@
+# secrets — nothing below this line ever gets committed
+.env
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# runtime artifacts
+results/
+*.db
+*.sqlite3
+.cache/
+
+# node
+node_modules/
+frontend/dist/
+frontend/build/
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# the brief itself is confidential — never commit it
+*.pdf
