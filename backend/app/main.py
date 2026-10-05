@@ -71,6 +71,35 @@ def contract_response(
     }
 
 
+@app.get("/")
+def index() -> Dict[str, Any]:
+    """What lives here, for anyone who opens the bare API URL.
+
+    FastAPI returns {"detail":"Not Found"} for an unrouted path, which reads as
+    a broken deployment rather than an API with no homepage.
+    """
+    return {
+        "service": "Clinic Front Desk Agent",
+        "author": "Anshul Kumar Yadav",
+        "graded_endpoint": {
+            "method": "POST",
+            "path": "/agent/run",
+            "request": {"conversation_id": "cv_0001", "today": "2026-10-01",
+                        "turns": ["...", "..."]},
+            "contract": "backend returns exactly the keys in schema.md",
+        },
+        "other_endpoints": {
+            "GET /health": "liveness",
+            "GET /ui/stats": "counters for the handoff queue",
+            "GET /ui/handoffs": "open escalations",
+            "GET /ui/conversations/{id}": "one conversation with its tool calls",
+            "POST /ui/handoffs/{id}/resolve": "mark a handoff resolved",
+        },
+        "app": "https://swasthiq-front-desk-agent.vercel.app",
+        "repository": "https://github.com/anshuly0720/swasthiq-front-desk-agent",
+    }
+
+
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
