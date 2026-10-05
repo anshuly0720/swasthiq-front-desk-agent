@@ -5,8 +5,20 @@
 - **Live app** — <https://swasthiq-front-desk-agent.vercel.app>
 - **API** — <https://swasthiq-front-desk-agent.onrender.com> (`/health`, `POST /agent/run`)
 
-The API is on Render's free tier, which sleeps after about 15 minutes idle: the
-first request after a pause takes 30–60 seconds, then it is fast.
+The API is on Render's free tier. Two consequences worth knowing before you open
+it: the service sleeps after about 15 minutes idle, so the first request after a
+pause takes 30–60 seconds; and the filesystem is ephemeral, so the conversation
+log behind the handoff queue is cleared by any redeploy. An empty queue means
+the log was reset, not that the agent is broken — replaying the scripts against
+the live URL repopulates it:
+
+```bash
+python runner.py --url https://swasthiq-front-desk-agent.onrender.com/agent/run
+python runner.py --dir adversarial --out results_adv --url https://swasthiq-front-desk-agent.onrender.com/agent/run
+```
+
+Clinic state is unaffected either way: every `POST /agent/run` reseeds it from
+`clinic.json`, which is what the starter README requires.
 
 A conversational front desk for Sunrise Clinic, Dehradun. It books, reschedules
 and cancels appointments, and it knows which calls it must not handle at all.
