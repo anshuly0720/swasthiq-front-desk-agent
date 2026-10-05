@@ -20,6 +20,22 @@ RELATIVE_DAY_WORDS: Dict[str, int] = {
     "kal": 1, "tomorrow": 1, "kl": 1,
     "parso": 2, "parson": 2, "narso": 3,
 }
+
+# The brief says callers speak Hindi, English and a mix, but all 15 example
+# scripts are romanised. A caller typing in Devanagari gets the same treatment.
+DEVANAGARI_WEEKDAYS: Dict[str, int] = {
+    "सोमवार": 0, "मंगलवार": 1, "बुधवार": 2, "गुरुवार": 3, "बृहस्पतिवार": 3,
+    "शुक्रवार": 4, "शनिवार": 5, "रविवार": 6, "इतवार": 6,
+}
+DEVANAGARI_RELATIVE: Dict[str, int] = {
+    "आज": 0, "कल": 1, "परसों": 2, "परसो": 2,
+}
+DEVANAGARI_PARTS = {
+    "morning": ("सुबह", "सवेरे"),
+    "afternoon": ("दोपहर",),
+    "evening": ("शाम",),
+}
+_DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 HINDI_NUMBERS: Dict[str, int] = {
     "ek": 1, "do": 2, "teen": 3, "char": 4, "chaar": 4, "paanch": 5, "panch": 5,
     "chhe": 6, "che": 6, "chah": 6, "saat": 7, "aath": 8, "nau": 9, "das": 10,
@@ -35,7 +51,7 @@ _MONTHS = ("january", "february", "march", "april", "may", "june", "july",
 
 # Built by concatenation, never str.format: a {1,2} quantifier inside a format
 # string is read as a replacement field and raises KeyError at import time.
-_DAY_TAREEKH = re.compile(r"\b(\d{1,2})\s*(?:tareekh|tarikh|tarik|taarikh)\b")
+_DAY_TAREEKH = re.compile(r"\b(\d{1,2})\s*(?:tareekh|tarikh|tarik|taarikh|तारीख|तारिख)")
 _DAY_ORDINAL = re.compile(r"\b(\d{1,2})\s*(?:st|nd|rd|th)\b")
 _DAY_MONTH = re.compile(r"\b(\d{1,2})\s+(?:" + "|".join(_MONTHS) + r")\b")
 _ISO = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
@@ -44,7 +60,13 @@ _BARE_NUMBER = re.compile(r"\b(\d{1,2})\b")
 
 
 def _normalise(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").lower().strip())
+    """Lowercase, collapse whitespace, and fold Devanagari digits to ASCII.
+
+    Folding the digits means every numeric rule below works on Devanagari input
+    without being written twice.
+    """
+    folded = (text or "").translate(_DEV_DIGITS)
+    return re.sub(r"\s+", " ", folded.lower().strip())
 
 
 def _word(w: str) -> re.Pattern:
@@ -75,6 +97,10 @@ def resolve_date(expression: str, today: str) -> Optional[Dict[str, object]]:
 
     # "Kal ya parso" means parso: the last option offered is the one meant.
     relative = None
+    for word, offset in DEVANAGARI_RELATIVE.items():
+        match = re.search(re.escape(word), text)
+        if match and (relative is None or match.start() > relative[0]):
+            relative = (match.start(), offset)
     for word, offset in RELATIVE_DAY_WORDS.items():
         match = _word(word).search(text)
         if match and (relative is None or match.start() > relative[0]):
@@ -91,11 +117,17 @@ def resolve_date(expression: str, today: str) -> Optional[Dict[str, object]]:
                 found.append(("day_number", resolved))
 
     weekday_target = None
-    for word, index in WEEKDAY_WORDS.items():
-        if _word(word).search(text):
+    for word, index in DEVANAGARI_WEEKDAYS.items():
+        if re.search(re.escape(word), text):
             weekday_target = index
             found.append(("weekday", _next_weekday(base, index)))
             break
+    if weekday_target is None:
+        for word, index in WEEKDAY_WORDS.items():
+            if _word(word).search(text):
+                weekday_target = index
+                found.append(("weekday", _next_weekday(base, index)))
+                break
 
     if not found:
         return None
@@ -140,7 +172,7 @@ def resolve_time(expression: str, part_of_day: Optional[str] = None) -> Optional
         return None
 
     quarter = 0
-    if re.search(r"\b(saadhe|sadhe|sade)\b", text):
+    if re.search(r"\b(saadhe|sadhe|sade)\b|साढ़े", text):
         quarter = 30
     elif re.search(r"\b(sawa|sava)\b", text):
         quarter = 15
@@ -180,6 +212,10 @@ def resolve_time(expression: str, part_of_day: Optional[str] = None) -> Optional
 
 def detect_part_of_day(text: str) -> Optional[str]:
     lowered = _normalise(text)
+    for part, words in DEVANAGARI_PARTS.items():
+        for word in words:
+            if re.search(re.escape(word), lowered):
+                return part
     for part, words in PART_WORDS.items():
         for word in words:
             if _word(word).search(lowered):

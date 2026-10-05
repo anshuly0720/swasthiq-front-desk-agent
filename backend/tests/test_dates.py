@@ -66,3 +66,22 @@ def test_part_of_day():
     assert detect_part_of_day("8 tareekh ko shaam ko") == "evening"
     assert detect_part_of_day("koi bhi time chalega") is None
 
+
+
+@pytest.mark.parametrize("phrase,expected", [
+    ("३ तारीख", "2026-10-03"),
+    ("8 तारीख", "2026-10-08"),
+    ("कल", "2026-10-02"),
+    ("परसों", "2026-10-03"),
+    ("शनिवार", "2026-10-03"),
+    ("आज", "2026-10-01"),
+    ("बुधवार, 7 तारीख", "2026-10-07"),
+])
+def test_devanagari_dates(phrase, expected):
+    """Devanagari digits are folded to ASCII, so the numeric rules work once."""
+    assert resolve_date(phrase, TODAY)["date"] == expected
+
+
+def test_devanagari_part_of_day():
+    assert detect_part_of_day("सुबह को") == "morning"
+    assert detect_part_of_day("शाम को") == "evening"

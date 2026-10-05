@@ -156,6 +156,58 @@ values, because the client number measured my laptop's resolver, not the agent.1
 
 
 
+### Who is calling versus who the appointment is for
+
+The hardest part of this data is that the clinic records make identity genuinely
+ambiguous: Aarav and Arjun Gupta share a surname, a date of birth and a phone
+number, and Sanjay and Kavita Rawat share a number with no guardianship between
+them. Two bugs here were found by my own adversarial cases rather than by
+reading the code.
+
+The first: a name with no marker beside it claimed the caller slot, so the real
+caller could not take it, subject and caller resolved to the same person, and
+the guardianship check never ran. `adv_0004` cancelled a man's appointment for
+his wife. Evidence is now assigned first, and an unmarked name only fills a role
+still empty.
+
+The second: markers were tested as a yes/no proximity window. In
+"Main Sunita Gupta, 9812200166, Aarav ke liye" both a caller marker and a
+subject marker are within reach of both names, so neither could be separated and
+the booking went to the guardian. Roles are now assigned by *nearest* marker.
+
+Related: a name window may not cross punctuation or a run of digits. Stripping
+digits out of the word list made "Gupta" and "Aarav" adjacent, so one window
+spanned two different patients. A phone number between two names separates them.
+
+### Devanagari input
+
+The brief says callers speak Hindi, English and a mix, but all 15 example
+scripts are romanised. Dates, weekdays, times, parts of day and the two doctors'
+surnames are matched in Devanagari as well, and Devanagari digits are folded to
+ASCII so the numeric rules are written once rather than twice. Without this, a
+caller typing in Hindi script got `abandoned` instead of a booking -- safe, but
+wrong.
+
+### Two .env files, and which one wins
+
+`load_dotenv()` walks up from the working directory and stops at the first file
+it finds. A second `.env` in `backend/` holding one unrelated setting shadowed
+the one at the repository root that held the key, and the agent silently ran on
+rules with `metrics.source` reporting the fallback. There is now exactly one
+`.env`, in `backend/`, and it is the only location documented. The incident is
+the reason `metrics.source` is in the response at all: a model that quietly
+stops being used should be visible in the output, not just in a log line.
+
+### A test file that never ran
+
+`tests/slots` was committed as `tests.slots.py`, which pytest does not collect,
+so fourteen tests covering the slot grid had never executed. Renaming it
+surfaced a second problem: the guard that forbids reading the system clock now
+failed on `ui_store.py`, which timestamps conversation log entries. That is a
+legitimate use -- a record of when a call actually happened, not a date derived
+from the caller's words -- so the guard excludes that one file by name, and a
+second test asserts the guard still covers every module that resolves dates.
+
 ### Still open
 
 (append as they come up — do not batch these at the end)

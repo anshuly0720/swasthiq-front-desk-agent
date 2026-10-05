@@ -2,6 +2,12 @@
 
 **Anshul Kumar Yadav** — SwasthiQ SDE Intern assignment, October 2026
 
+- **Live app** — <https://swasthiq-front-desk-agent.vercel.app>
+- **API** — <https://swasthiq-front-desk-agent.onrender.com> (`/health`, `POST /agent/run`)
+
+The API is on Render's free tier, which sleeps after about 15 minutes idle: the
+first request after a pause takes 30–60 seconds, then it is fast.
+
 A conversational front desk for Sunrise Clinic, Dehradun. It books, reschedules
 and cancels appointments, and it knows which calls it must not handle at all.
 
@@ -12,37 +18,30 @@ and cancels appointments, and it knows which calls it must not handle at all.
 One command, from the repository root:
 
 ```bash
-docker compose up --build
+./start.sh          # macOS / Linux
+start.bat           ::  Windows
 ```
 
-Backend on <http://localhost:8000>, frontend on <http://localhost:5173>.
+That creates the virtualenv if it is missing, installs dependencies, and serves
+`POST /agent/run` on <http://127.0.0.1:8000>. Neither Docker nor Node is needed
+for the graded endpoint.
 
-Before the first run, create the backend environment file and put a Gemini key in it:
+The agent runs **without an API key**. Extraction falls back to the rule-based
+path and every one of the 23 test conversations still reaches the correct
+terminal state; the model raises the ceiling on phrasings the rules do not
+cover. To use it, put a Gemini key in `backend/.env` (the script creates the
+file from `.env.example` on first run).
 
-```bash
-cp backend/.env.example backend/.env    # then edit LLM_API_KEY
-```
-
-The agent runs without a key. Extraction falls back to the rule-based path and
-every one of the 23 test conversations still produces the correct outcome; the
-model raises the ceiling on phrasings the rules do not cover.
-
-<details>
-<summary>Without Docker</summary>
-
-```bash
-cd backend
-python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --port 8000
-```
+### The two screens
 
 ```bash
 cd frontend
 cp .env.example .env
-npm install && npm run dev
+npm install && npm run dev        # http://localhost:5173
 ```
-</details>
+
+Or open the live link at the top of this file — the frontend is deployed and
+points at the deployed API.
 
 ### Replaying the conversation scripts
 
@@ -174,7 +173,29 @@ what the key actually serves rather than by name.
 
 <!-- Regenerate with: python metrics_table.py -->
 
-PASTE THE OUTPUT OF `python metrics_table.py` HERE
+Measured per conversation, first (uncached) call, from the `metrics` block of
+real result files:
+
+| Conversation | Where | Tokens | Latency | Source |
+|---|---|---|---|---|
+| `cv_0001` booked | local | 1,050 | 3,304 ms | gemini |
+| `cv_0009` escalated / not_authorised | local | 1,547 | 4,019 ms | gemini |
+| `cv_0011` escalated / clinical_urgent | **deployed** | 1,178 | 4,809 ms | gemini |
+| repeat run, prompt cache hit | local | 0 | 20–60 ms | gemini (cached) |
+
+So roughly **1,000–1,600 tokens** and **3–5 seconds** per conversation, one model
+call each, with repeat runs served from the prompt cache in tens of milliseconds.
+
+`python metrics_table.py` regenerates this from whatever is in `results/` and
+`results_adv/`.
+
+**Some rows in a fresh sweep will show `rules_fallback` with zero tokens.** That
+is not an error path being hit by accident: the Gemini free tier has a daily
+request cap, and a full sweep of 23 conversations run three times exhausts it.
+When that happens the rule-based extractor completes the conversation and
+`metrics.source` says so. Every one of the 23 cases reaches its correct terminal
+state on that path, which is why the fallback is a design decision rather than a
+safety net.
 
 Latency is measured **server-side**, from the `metrics` block. The runner's
 client-side wall clock reported ~2,040 ms against a stub whose own measurement
@@ -211,10 +232,11 @@ reason, same set of tool names, every time.
 cd backend && pytest -q
 ```
 
-51 tests. Beyond the happy paths: every error code, the Monday window overlap
+138 tests. Beyond the happy paths: every error code, the Monday window overlap
 collapsing to 24 slots, Sunday and holiday and leave days, the three Sharmas and
 the two Qureshis, the 20-thread race, malformed and extra tool arguments, denied
-symptoms, and a guard that fails if any module in `app/` reads the system clock.
+symptoms, Devanagari input, hostile input that must never produce an action, and
+a guard that fails if any module that resolves dates reads the system clock.
 
 ---
 
