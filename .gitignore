@@ -29,3 +29,5 @@ Thumbs.db
 
 # the brief itself is confidential — never commit it
 *.pdf
+
+results_adv/

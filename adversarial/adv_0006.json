@@ -1,0 +1,23 @@
+{
+  "id": "adv_0006",
+  "description": "Relative dates resolved from a different today.",
+  "today": "2026-10-08",
+  "turns": [
+    "Dr. Rao ke saath kal ka appointment chahiye.",
+    "Accha, toh parso subah kar dijiye.",
+    "Harpreet Kaur, 9812200342."
+  ],
+  "expected": {
+    "terminal_state": "booked",
+    "escalation_reason": null,
+    "must_call": [
+      "lookup_patient",
+      "search_slots",
+      "book_appointment"
+    ],
+    "must_not_call": [
+      "escalate_to_human"
+    ],
+    "notes": "today is 2026-10-08, not the 2026-10-01 every example uses. 'kal' is 2026-10-09, when Dr. Rao is on leave; 'parso' is Saturday 2026-10-10. An agent that hardcoded the example week, or that reads the system clock, lands on the wrong day or on leave."
+  }
+}

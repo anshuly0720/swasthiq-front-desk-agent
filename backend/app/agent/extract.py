@@ -24,8 +24,8 @@ _CHUNK = re.compile(r"[,.!?;\u2026]|\.\.\.|\bnahi nahi\b|\bbalki\b")
 _CANCEL = re.compile(r"\b(cancel|radd|rad kar)\b")
 _RESCHEDULE = re.compile(r"\b(reschedule|postpone|prepone|shift|badal|badlna|aage badha|"
                          r"karwana hai|kara dijiye|kar dijiye)\b")
-_EXISTING = re.compile(r"\b(mera|meri|mere|unka|unki|ka|ki)\s+[\w\s]{0,20}?appointment\b|"
-                       r"\baaj ka appointment\b|\bappointment hai\b")
+_EXISTING = re.compile(r"\b(mera|meri|mere|unka|unki)\s+[\w\s]{0,20}?appointment\b|"
+                       r"\bappointment hai\b")
 _BOOK = re.compile(r"\b(appointment|milna|milne|dikhana|dikhane|aa sakta|aa sakti|slot|"
                    r"time mil|book)\b")
 
@@ -46,6 +46,10 @@ _SUBJECT_MARKERS = (
     r"mere bete", r"meri beti", r"mera beta", r"meri bachchi", r"ke naam",
     r"for my", r"for ",
 )
+# "mere bete ke liye" names a relationship but no person. With two children on
+# one record, that is not enough to book.
+_UNNAMED_RELATIVE = re.compile(r"\b(mere bete|mera beta|meri beti|meri bachchi|mere bachche|"
+                               r"my son|my daughter|my child|mere ladke)\b")
 _CALLER_MARKERS = (r"\bmain\b", r"\bmai\b", r"bol rahi", r"bol raha", r"\bmera naam\b",
                    r"\bmy name\b", r"\bthis is\b", r"\bi am\b")
 
@@ -79,6 +83,7 @@ class Extraction:
     caller_name: Optional[str] = None
     caller_phone: Optional[str] = None
     subject_name: Optional[str] = None
+    subject_unnamed_relative: bool = False
     date_conflict: Optional[str] = None
     gave_up: bool = False
     injection: bool = False
@@ -98,6 +103,7 @@ def extract(turns: List[str], today: str, store) -> Extraction:
     out.injection = bool(_INJECTION.search(joined))
     out.bulk = bool(_BULK.search(joined))
     out.gave_up = bool(_GAVE_UP.search(joined))
+    out.subject_unnamed_relative = bool(_UNNAMED_RELATIVE.search(joined))    
 
     # --- doctor: surname of a doctor in clinic.json -----------------------
     for doctor in store.all_doctors():
@@ -141,33 +147,41 @@ def extract(turns: List[str], today: str, store) -> Extraction:
                     continue
                 if not find_by_name(window, patients):
                     continue
-                position = lowered.find(window.lower())
-                hits.append((_trim_to_name(window, patients), lowered, position))
+                trimmed = _trim_to_name(window, patients)
+                position = lowered.find(trimmed.lower())
+                if position < 0:
+                    position = lowered.find(window.lower())
+                around = lowered[max(0, position - 40):position + len(trimmed) + 40]
+                hits.append((
+                    trimmed,
+                    any(re.search(m, around) for m in _SUBJECT_MARKERS),
+                    any(re.search(m, around) for m in _CALLER_MARKERS)
+                    or bool(_PHONE.search(around)),
+                ))
     # longest window first, so "Harpreet Singh" beats "Harpreet"
-    hits.sort(key=lambda h: -len(h[0]))
+    hits.sort(key=lambda hit: -len(hit[0]))
 
-    subject, caller = None, None
-    for window, lowered, position in hits:
-        if subject and caller:
-            break
-        around = lowered[max(0, position - 30):position + len(window) + 30]
-        is_subject = any(re.search(m, around) for m in _SUBJECT_MARKERS)
-        is_caller = any(re.search(m, around) for m in _CALLER_MARKERS) or bool(
-            _PHONE.search(around))
-        if is_subject and not is_caller and subject is None:
+    subject = caller = None
+    # Evidence first. A name carrying a subject marker and no caller marker is
+    # who the appointment is for; one next to "main" or a phone number is who
+    # is calling.
+    for window, is_subject, is_caller in hits:
+        if is_subject and not is_caller and subject is None and window != caller:
             subject = window
-        elif is_caller and caller is None:
+        elif is_caller and not is_subject and caller is None and window != subject:
             caller = window
-        elif subject is None and caller is None:
-            caller = window
+    # Only then fall back to an unmarked name, and only for a role still empty.
+    # Assigning on no evidence first is what let the subject take the caller
+    # slot and hide an authorisation failure.
+    if caller is None:
+        for window, _s, _c in hits:
+            if window != subject:
+                caller = window
+                break
+    if subject is None and caller is None and hits:
+        caller = hits[0][0]
 
-    if subject and not caller:
-        out.subject_name = subject
-    elif caller and not subject:
-        out.caller_name = caller
-    else:
-        out.caller_name, out.subject_name = caller, subject
-
+    out.caller_name, out.subject_name = caller, subject
     # --- intent -----------------------------------------------------------
     if _CANCEL.search(joined):
         out.intent = "cancel"

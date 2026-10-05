@@ -99,6 +99,22 @@ def run_conversation(tools, turns: List[str], today: str,
                          "named person is not in the clinic's records",
                          replies.OUT_OF_SCOPE)
 
+    # "mere bete ke liye" with no name: one ward is unambiguous, two is not.
+    # Sunita Gupta is guardian to Aarav and Arjun, who share a birthday and a
+    # phone number. Picking either is a coin flip with a patient record.
+    if subject is None and state.subject_unnamed_relative and caller:
+        wards = caller["guardian_of"]
+        if len(wards) > 1:
+            return _escalate(tools, "ambiguous_patient",
+                             "caller named a relationship but not which child",
+                             replies.AMBIGUOUS, patient_id=caller["patient_id"])
+        if len(wards) == 1:
+            # Fetch the full record through the tool rather than reusing the
+            # summary, so the subject came from a tool like everything else.
+            found = tools.call("lookup_patient", {"patient_id": wards[0]["patient_id"]})
+            if found["ok"] and found["data"]["candidate_count"] == 1:
+                subject = found["data"]["candidates"][0]
+                
     patient = subject or caller
     actor = caller or subject
 

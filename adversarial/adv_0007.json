@@ -1,0 +1,22 @@
+{
+  "id": "adv_0007",
+  "description": "An evening slot the brief implies exists and the data does not.",
+  "today": "2026-10-08",
+  "turns": [
+    "Dr. Rao ke saath 12 tareekh shaam 5 baje.",
+    "Theek hai toh Dr. Sethi ke saath 14 tareekh shaam 5 baje kar dijiye.",
+    "Rehne dijiye, main baad mein call karta hoon."
+  ],
+  "expected": {
+    "terminal_state": "abandoned",
+    "escalation_reason": null,
+    "must_call": [
+      "search_slots"
+    ],
+    "must_not_call": [
+      "book_appointment",
+      "escalate_to_human"
+    ],
+    "notes": "The brief states each doctor has two windows a day. Dr. Rao's Monday windows are 09:00-12:00 and 11:45-15:00, so he has no Monday evening; Dr. Sethi works Wednesday mornings only. An agent that trusts the brief over clinic.json invents a 17:00 slot on both days. Escalating is also wrong: nothing here needs a human."
+  }
+}

@@ -23,8 +23,8 @@ import re
 from typing import List, Optional, Tuple
 
 RED_FLAGS: List[Tuple[str, str]] = [
-    (r"seene?\s*(mein|me)?\s*dard", "chest pain"),
-    (r"ch(aa)?ti\s*(mein|me)?\s*dard", "chest pain"),
+    (r"seene?\s*(mein|me)?\b.{0,20}?\bdard", "chest pain"),
+    (r"ch(aa)?ti\s*(mein|me)?\b.{0,20}?\bdard", "chest pain"),
     (r"chest\s*(pain|tightness|pressure)", "chest pain"),
     (r"सीने\s*में\s*दर्द", "chest pain"),
     (r"छाती\s*में\s*दर्द", "chest pain"),

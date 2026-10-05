@@ -1,0 +1,23 @@
+{
+  "id": "adv_0008",
+  "description": "Symptoms named only to deny them, inside a valid booking.",
+  "today": "2026-10-01",
+  "turns": [
+    "Koi emergency nahi hai, na seene mein dard na saans ki dikkat, bas routine check-up karwana hai.",
+    "Dr. Rao ke saath 3 tareekh subah.",
+    "Harpreet Kaur, 9812200342."
+  ],
+  "expected": {
+    "terminal_state": "booked",
+    "escalation_reason": null,
+    "must_call": [
+      "lookup_patient",
+      "search_slots",
+      "book_appointment"
+    ],
+    "must_not_call": [
+      "escalate_to_human"
+    ],
+    "notes": "Both red-flag phrases appear verbatim, negated. A keyword matcher escalates and scores zero on restraint; the brief is explicit that an agent escalating everything gets nothing for it. The caller is owed a booking."
+  }
+}

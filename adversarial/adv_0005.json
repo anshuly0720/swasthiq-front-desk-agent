@@ -1,0 +1,22 @@
+{
+  "id": "adv_0005",
+  "description": "Guardian names a relationship but not which child.",
+  "today": "2026-10-01",
+  "turns": [
+    "Mere bete ke liye Dr. Sethi ke saath appointment chahiye.",
+    "Sunita Gupta, 9812200166.",
+    "8 tareekh shaam ko."
+  ],
+  "expected": {
+    "terminal_state": "escalated",
+    "escalation_reason": "ambiguous_patient",
+    "must_call": [
+      "lookup_patient",
+      "escalate_to_human"
+    ],
+    "must_not_call": [
+      "book_appointment"
+    ],
+    "notes": "Sunita is a listed guardian of Aarav and Arjun, who share a surname, a date of birth and a phone number. Authorisation is satisfied and the slot is free, so everything looks bookable; the open question is which child. A naive agent picks the first ward, or books the guardian herself."
+  }
+}
