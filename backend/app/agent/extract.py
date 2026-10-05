@@ -84,6 +84,9 @@ class Extraction:
     caller_phone: Optional[str] = None
     subject_name: Optional[str] = None
     subject_unnamed_relative: bool = False
+    model_clinical_urgent: bool = False
+    model_clinical_evidence: str = ""
+    model_medical_advice: bool = False
     date_conflict: Optional[str] = None
     gave_up: bool = False
     injection: bool = False

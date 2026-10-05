@@ -31,3 +31,7 @@ Thumbs.db
 *.pdf
 
 results_adv/
+
+.cache/
+backend/data/conversations.db
+frontend/.env

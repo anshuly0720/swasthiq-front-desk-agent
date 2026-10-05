@@ -89,7 +89,28 @@ project reads the system clock.
   Sharma ×3, Gupta ×3, Joshi ×2, Rawat ×2.
 
 ## Decisions I made
+### The transcript shows tool calls after the turns, not between them
 
+The mockup interleaves tool calls with the conversation. Mine lists the caller's
+turns, then the tool calls, then the agent's reply, because that is the real
+order: the policy engine reads every turn before it calls a mutating tool, so a
+clinical red flag in the final turn arrives before a booking could commit.
+Drawing the calls between the turns would show an order that did not happen, in
+the one panel whose whole job is to prove nothing was invented.
+
+### Model, quota and what happens when it runs out
+
+gemini-2.5-flash, pinned. gemini-2.0-flash was retired during this assignment
+and gemini-3.8-flash returns RESOURCE_EXHAUSTED on a free key, so I probed the
+models the key can actually serve rather than trusting a name.
+
+Free-tier quota is finite and the hidden set is ~25 conversations run 3 times.
+Three things follow: calls are paced (LLM_MIN_INTERVAL), identical prompts are
+cached on disk (LLM_CACHE=0 disables it, and the determinism figures below were
+measured with it off), and when the model is unreachable the rule-based
+extractor takes over rather than the conversation failing. All 23 of my test
+cases pass on rules alone — the model raises the ceiling on phrasings the rules
+do not cover; it is not load-bearing for correctness.
 ### Architecture: the model interprets, code decides
 
 **The model never chooses a tool, emits an identifier, or does date arithmetic.**

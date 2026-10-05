@@ -1,0 +1,176 @@
+:root {
+  --page: #f5f7fa;
+  --card: #ffffff;
+  --line: #e4e9f0;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --blue: #2563eb;
+  --blue-soft: #eff6ff;
+  --red: #dc2626;
+  --red-soft: #fee2e2;
+  --amber: #b45309;
+  --amber-soft: #fef3c7;
+  --green: #15803d;
+  --green-soft: #dcfce7;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell { display: flex; min-height: 100vh; }
+
+/* --- the shared rail, persistent across both screens --------------------- */
+.sidebar {
+  width: 112px;
+  flex: 0 0 112px;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  padding: 28px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.marker {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+}
+.marker-active { border-color: var(--blue); cursor: pointer; }
+
+.main { flex: 1; padding: 34px 40px 60px; max-width: 1400px; }
+
+/* --- page header -------------------------------------------------------- */
+.page-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 24px; margin-bottom: 26px;
+}
+h1 { font-size: 29px; margin: 0 0 6px; letter-spacing: -0.02em; }
+.subtitle { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+/* --- pills -------------------------------------------------------------- */
+.pill {
+  display: inline-block; padding: 5px 11px; border-radius: 5px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;
+}
+.pill-info { background: var(--blue-soft); color: var(--blue); }
+.pill-danger { background: var(--red-soft); color: var(--red); }
+.pill-warn { background: var(--amber-soft); color: var(--amber); }
+.pill-ok { background: var(--green-soft); color: var(--green); }
+
+/* --- counters ----------------------------------------------------------- */
+.counters {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px;
+}
+.counter {
+  background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 20px 22px;
+}
+.counter-label {
+  margin: 0 0 10px; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+}
+.counter-value { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+.counter-note { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.note-info { color: var(--blue); }
+.note-danger { color: var(--red); }
+
+/* --- cards and table ---------------------------------------------------- */
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 9px; padding: 22px 24px;
+}
+.card-title { margin: 0 0 16px; font-size: 15.5px; font-weight: 700; }
+.section-label {
+  margin: 26px 0 10px; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+}
+
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 0 12px 11px 0; border-bottom: 1px solid var(--line);
+}
+.table td { padding: 15px 12px 15px 0; border-bottom: 1px solid #f1f4f8; vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table .right { text-align: right; padding-right: 0; }
+.said { font-weight: 600; }
+.muted { color: var(--muted); }
+.empty { color: var(--muted); padding: 26px 0; }
+
+code { font-family: var(--mono); font-size: 13px; }
+
+.link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--ink); font: inherit;
+}
+.link:hover code { color: var(--blue); text-decoration: underline; }
+
+.btn {
+  padding: 7px 15px; border-radius: 6px; border: 1px solid #cbd5e1;
+  background: var(--card); color: var(--ink);
+  font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.btn:hover { border-color: #94a3b8; }
+.btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+
+/* --- conversation detail ------------------------------------------------ */
+.split { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 20px; }
+
+.transcript { display: flex; flex-direction: column; gap: 14px; }
+.row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: start; }
+.who {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted); padding-top: 10px; text-align: right;
+}
+.bubble {
+  margin: 0; background: #f8fafc; border: 1px solid var(--line);
+  border-radius: 8px; padding: 11px 14px;
+}
+/* The blue rule marks a tool call: everything the agent claims came from one. */
+.tool {
+  margin: 0; background: var(--blue-soft); border-left: 3px solid var(--blue);
+  border-radius: 0 8px 8px 0; padding: 11px 14px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word; color: #1e3a8a;
+}
+.tool-name { font-weight: 700; }
+
+.banner {
+  margin: 18px 0 0; background: var(--red-soft); color: var(--red);
+  border-radius: 8px; padding: 13px 15px; font-weight: 600; font-size: 14px;
+}
+
+.outcome { margin: 0; }
+.outcome-row {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 9px 0; border-bottom: 1px solid #f1f4f8;
+}
+.outcome-row:last-child { border-bottom: none; }
+.outcome dt { color: var(--muted); font-size: 14px; }
+.outcome dd { margin: 0; font-weight: 600; text-align: right; }
+
+.determinism { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.fingerprints { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+
+.error { color: var(--red); background: var(--red-soft); padding: 13px 15px; border-radius: 8px; }
+
+@media (max-width: 1040px) {
+  .counters { grid-template-columns: repeat(2, 1fr); }
+  .split { grid-template-columns: 1fr; }
+  .main { padding: 24px 20px 48px; }
+}
+
+.bubble-agent { background: #fff; border-color: #dbe3ec; }

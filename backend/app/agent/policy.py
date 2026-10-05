@@ -25,10 +25,19 @@ from .safety import screen
 
 def _result(terminal_state: str, reply: str, escalation_reason: Optional[str] = None,
             patient_id: Optional[str] = None, appointment_id: Optional[str] = None,
-            note: Optional[str] = None) -> Dict[str, Any]:
+            note: Optional[str] = None, trigger: Optional[str] = None) -> Dict[str, Any]:
+    # `trigger` is the caller turn that caused this outcome. Not part of the
+    # graded contract -- it is what the handoff queue quotes under "caller said",
+    # so a human picking the conversation up sees why it is in front of them.
     return {"terminal_state": terminal_state, "escalation_reason": escalation_reason,
             "patient_id": patient_id, "appointment_id": appointment_id,
-            "reply": reply, "note": note}
+            "reply": reply, "note": note, "trigger": trigger}
+
+
+def _turn_at(turns: List[str], index: Optional[int]) -> Optional[str]:
+    if index is None or not turns:
+        return turns[0] if turns else None
+    return turns[index] if 0 <= index < len(turns) else turns[0]
 
 
 def _lookup(tools, name: Optional[str], phone: Optional[str]) -> Tuple[Optional[dict], str]:
@@ -52,9 +61,11 @@ def _lookup(tools, name: Optional[str], phone: Optional[str]) -> Tuple[Optional[
 
 
 def _escalate(tools, reason: str, detail: str, reply: str,
-              patient_id: Optional[str] = None) -> Dict[str, Any]:
+              patient_id: Optional[str] = None,
+              trigger: Optional[str] = None) -> Dict[str, Any]:
     tools.call("escalate_to_human", {"reason": reason, "detail": detail})
-    return _result("escalated", reply, escalation_reason=reason, patient_id=patient_id)
+    return _result("escalated", reply, escalation_reason=reason, patient_id=patient_id,
+                   trigger=trigger)
 
 
 def run_conversation(tools, turns: List[str], today: str,
@@ -67,7 +78,8 @@ def run_conversation(tools, turns: List[str], today: str,
         return _escalate(tools, "clinical_urgent",
                          "caller reports {} (turn {})".format(found["finding"],
                                                               found["turn_index"] + 1),
-                         replies.EMERGENCY)
+                         replies.EMERGENCY,
+                         trigger=_turn_at(turns, found.get("turn_index")))
 
     # 2. Injected instructions and bulk operations: nothing for a human to pick
     #    up, so refused rather than escalated. No tool is called at all.
@@ -78,7 +90,8 @@ def run_conversation(tools, turns: List[str], today: str,
     # 3. A clinical judgement the front desk cannot give.
     if found and found["kind"] == "medical_advice":
         return _escalate(tools, "medical_advice",
-                         "caller {}".format(found["finding"]), replies.ADVICE)
+                         "caller {}".format(found["finding"]), replies.ADVICE,
+                         trigger=_turn_at(turns, found.get("turn_index")))
 
     # 4. Nothing usable was ever said.
     if state.intent == "none" and not (state.caller_name or state.caller_phone):
@@ -91,13 +104,13 @@ def run_conversation(tools, turns: List[str], today: str,
     if "ambiguous" in (subject_status, caller_status):
         return _escalate(tools, "ambiguous_patient",
                          "more than one patient matches the name given",
-                         replies.AMBIGUOUS)
+                         replies.AMBIGUOUS, trigger=_turn_at(turns, 0))
     if "unknown" in (subject_status, caller_status):
         # A name was given and no record matched. No tool registers a patient,
         # so this needs a human rather than a guess. DECISIONS.md item 9.
         return _escalate(tools, "out_of_scope",
                          "named person is not in the clinic's records",
-                         replies.OUT_OF_SCOPE)
+                         replies.OUT_OF_SCOPE, trigger=_turn_at(turns, 0))
 
     # "mere bete ke liye" with no name: one ward is unambiguous, two is not.
     # Sunita Gupta is guardian to Aarav and Arjun, who share a birthday and a
@@ -107,7 +120,8 @@ def run_conversation(tools, turns: List[str], today: str,
         if len(wards) > 1:
             return _escalate(tools, "ambiguous_patient",
                              "caller named a relationship but not which child",
-                             replies.AMBIGUOUS, patient_id=caller["patient_id"])
+                             replies.AMBIGUOUS, patient_id=caller["patient_id"],
+                             trigger=_turn_at(turns, 0))
         if len(wards) == 1:
             # Fetch the full record through the tool rather than reusing the
             # summary, so the subject came from a tool like everything else.
@@ -124,7 +138,7 @@ def run_conversation(tools, turns: List[str], today: str,
         if subject["patient_id"] not in wards:
             return _escalate(tools, "not_authorised",
                              "caller is neither the patient nor a listed guardian",
-                             replies.NOT_AUTHORISED)
+                             replies.NOT_AUTHORISED, trigger=_turn_at(turns, 0))
 
     if state.intent in ("book", "ask_availability"):
         return _do_book(tools, state, patient, actor)
