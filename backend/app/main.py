@@ -19,6 +19,8 @@ from .clinic_data import load_clinic
 from .store import ClinicStore
 from .tools.registry import ToolLayer
 
+from .agent.policy import run_conversation
+
 logger = logging.getLogger("front_desk")
 
 app = FastAPI(title="Clinic Front Desk Agent", version="0.1.0")
@@ -71,16 +73,12 @@ def agent_run(request: AgentRunRequest) -> Dict[str, Any]:
     try:
         tools = ToolLayer(store, today=request.today)
 
-        # ------------------------------------------------------------------
-        # Day 2 replaces this block with the conversation layer. Everything
-        # above and below it is the contract and stays.
-        # ------------------------------------------------------------------
-        terminal_state = "abandoned"
-        escalation_reason = None
-        patient_id = None
-        appointment_id = None
-        reply = ""
-        # ------------------------------------------------------------------
+        outcome = run_conversation(tools, request.turns, request.today)
+        terminal_state = outcome["terminal_state"]
+        escalation_reason = outcome["escalation_reason"]
+        patient_id = outcome["patient_id"]
+        appointment_id = outcome["appointment_id"]
+        reply = outcome["reply"]
 
         return contract_response(
             conversation_id=request.conversation_id,

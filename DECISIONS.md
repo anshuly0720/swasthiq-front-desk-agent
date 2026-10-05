@@ -125,14 +125,17 @@ could commit, including when it lands in the last turn.
 Kept private during development, made public at submission, because the brief
 marks the material confidential and also requires a public repository.
 
-### Still open
-
-(append as they come up — do not batch these at the end)
-
 ### Latency is measured server-side
 
 The runner's client-side wall clock reported ~2,040 ms per conversation against
 a stub whose own measurement was 1 ms. The constant was Windows resolving
 `localhost` to IPv6 first while uvicorn listens on IPv4; calling 127.0.0.1
 directly gives 70 ms. The figures in README.md are the server-side `metrics`
-values, because the client number measured my laptop's resolver, not the agent.
+values, because the client number measured my laptop's resolver, not the agent.1
+
+
+
+### Still open
+
+(append as they come up — do not batch these at the end)
+
